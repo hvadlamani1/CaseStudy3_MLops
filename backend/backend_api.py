@@ -4,6 +4,13 @@ import tempfile
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse
 from huggingface_hub import InferenceClient
+from prometheus_client import make_asgi_app, Counter, Histogram
+
+# Prometheus Metrics
+BACKEND_REQUESTS = Counter("backend_requests_total", "Total number of transcription requests to backend")
+BACKEND_LATENCY = Histogram("backend_request_duration_seconds", "Total time taken to process a request")
+TRANSCRIPTION_LATENCY = Histogram("backend_transcription_duration_seconds", "Time taken for speech recognition")
+TRANSLATION_LATENCY = Histogram("backend_translation_duration_seconds", "Time taken for text translation")
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -11,6 +18,10 @@ app = FastAPI(
     description="Backend API for processing Air Traffic Control audio into plain English.",
     version="1.0.0"
 )
+
+# Expose Prometheus metrics endpoint
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 # --- API Endpoint ---
 @app.post("/process_audio")
@@ -21,6 +32,9 @@ async def process_audio(
     """
     Accepts an audio file and returns the ATC transcription and plain English translation.
     """
+    BACKEND_REQUESTS.inc()
+    request_start_time = time.time()
+
     # Save uploaded file to a temporary location
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav", mode="wb") as temp_audio:
         content = await audio_file.read()
@@ -35,8 +49,10 @@ async def process_audio(
             raise HTTPException(status_code=401, detail="Hugging Face token required for API mode.")
         
         client = InferenceClient(token=hf_token)
-        asr_result = client.automatic_speech_recognition(temp_audio_path, model="openai/whisper-large-v3-turbo")
-        transcription = getattr(asr_result, "text", asr_result.get("text") if isinstance(asr_result, dict) else str(asr_result))
+        
+        with TRANSCRIPTION_LATENCY.time():
+            asr_result = client.automatic_speech_recognition(temp_audio_path, model="openai/whisper-large-v3-turbo")
+            transcription = getattr(asr_result, "text", asr_result.get("text") if isinstance(asr_result, dict) else str(asr_result))
         
         t1 = time.time()
         
@@ -44,14 +60,17 @@ async def process_audio(
             {"role": "system", "content": "You are an expert aviation translator. Your ONLY job is to take the provided ATC transmission and rewrite it into simple, conversational plain English for a non-pilot.\nRules:\n1. DO NOT add any extra dialogue or respond to the transmission.\n2. DO NOT pretend to be ATC.\n3. DO NOT expand or add any new information.\n4. ONLY provide the direct translation.\n\nExamples:\nInput: 'Delta 123 heavy, cleared ILS runway 27R approach.'\nOutput: 'Delta flight 123, you are cleared to land using the instruments on runway 27 Right.'\n\nInput: 'Mayday, mayday, mayday. I'm going down.'\nOutput: 'Emergency, emergency, emergency. The aircraft is crashing.'"},
             {"role": "user", "content": f"Input: '{transcription}'\nOutput:"}
         ]
-        chat_completion = client.chat_completion(messages, model="meta-llama/Llama-3.2-1B-Instruct", max_tokens=256)
-        translation = chat_completion.choices[0].message.content
+        
+        with TRANSLATION_LATENCY.time():
+            chat_completion = client.chat_completion(messages, model="meta-llama/Llama-3.2-1B-Instruct", max_tokens=256)
+            translation = chat_completion.choices[0].message.content
         t2 = time.time()
 
         # Clean up temp file
         os.remove(temp_audio_path)
 
         # Return standard JSON response
+        BACKEND_LATENCY.observe(time.time() - request_start_time)
         return JSONResponse(content={
             "transcription": transcription,
             "translation": translation,
@@ -62,4 +81,5 @@ async def process_audio(
     except Exception as e:
         if os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
+        BACKEND_LATENCY.observe(time.time() - request_start_time)
         raise HTTPException(status_code=500, detail=str(e))
