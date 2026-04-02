@@ -1,0 +1,57 @@
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: atc_backend
+    expose:
+      - '9001'
+    networks:
+      - atc_net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9001/health']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: atc_frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '7001:7001'
+    expose:
+      - '8001'
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    networks:
+      - atc_net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - atc_net
+
+networks:
+  atc_net:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+    driver: local

@@ -11,7 +11,7 @@ FRONTEND_BACKEND_ERRORS = Counter("frontend_backend_errors_total", "Total number
 FRONTEND_EXCEPTIONS = Counter("frontend_exceptions_total", "Total number of unexpected UI exceptions")
 
 #Where to send the backend requests
-BACKEND_API_URL = "http://paffenroth-23.dyn.wpi.edu:9001/process_audio"
+BACKEND_API_URL = "http://backend:9001/process_audio"
 
 
 def transcribe_audio_ui(audio_file):

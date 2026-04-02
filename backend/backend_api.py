@@ -23,6 +23,11 @@ app = FastAPI(
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 
+# --- Healthcheck Endpoint ---
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # --- API Endpoint ---
 @app.post("/process_audio")
 async def process_audio(
