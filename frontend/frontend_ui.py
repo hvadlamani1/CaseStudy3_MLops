@@ -99,4 +99,4 @@ if __name__ == "__main__":
     # Start Prometheus metrics server on port 8001
     start_http_server(8001)
     # The shared frontend runs the UI. Keep this on 0.0.0.0 so it's accessible.
-    demo.launch(server_name="0.0.0.0", server_port=7001, share=True, show_api=False)
+    demo.launch(server_name="0.0.0.0", server_port=7001, share=True)
