@@ -12,9 +12,10 @@ FRONTEND_EXCEPTIONS = Counter("frontend_exceptions_total", "Total number of unex
 
 #Where to send the backend requests
 BACKEND_API_URL = "http://backend:9001/process_audio"
+BACKEND_LOCAL_URL = "http://backend_local:9002/process_audio"
 
 
-def transcribe_audio_ui(audio_file):
+def transcribe_audio_ui(audio_file, use_local_model):
     FRONTEND_REQUESTS.inc()
     request_start_time = time.time()
 
@@ -41,7 +42,8 @@ def transcribe_audio_ui(audio_file):
             files = {"audio_file": (os.path.basename(audio_file), f, "audio/wav")}
 
             t0 = time.time()
-            response = requests.post(BACKEND_API_URL, files=files, data=payload_data)
+            target_url = BACKEND_LOCAL_URL if use_local_model else BACKEND_API_URL
+            response = requests.post(target_url, files=files, data=payload_data)
             t1 = time.time()
 
         # Handle the API Response
@@ -65,7 +67,8 @@ def transcribe_audio_ui(audio_file):
             yield f"Backend API Error: {error_msg}", f"Backend API Error: {error_msg}"
 
     except requests.exceptions.ConnectionError:
-        error_msg = f"Failed to connect to backend at {BACKEND_API_URL}. Is your FastAPI server running?"
+        target_url = BACKEND_LOCAL_URL if use_local_model else BACKEND_API_URL
+        error_msg = f"Failed to connect to backend at {target_url}. Is your server running?"
         FRONTEND_BACKEND_ERRORS.inc()
         yield gr.update(value=error_msg, label="Connection Error"), gr.update(value=error_msg, label="Connection Error")
     except Exception as e:
@@ -79,7 +82,8 @@ def transcribe_audio_ui(audio_file):
 grInt = gr.Interface(
     fn=transcribe_audio_ui,
     inputs=[
-        gr.Audio(type="filepath")
+        gr.Audio(type="filepath"),
+        gr.Checkbox(label="Use Local Model", value=False)
     ],
     outputs=[
         gr.Textbox(label="Step 1: Raw ATC Transcription"),
