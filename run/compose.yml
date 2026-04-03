@@ -23,7 +23,7 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     container_name: group1_backend_local
-    command: ["uvicorn", "backend_local:app", "--host", "0.0.0.0", "--port", "9002"]
+    command: ["sh", "-c", "prometheus-node-exporter & uvicorn backend_local:app --host 0.0.0.0 --port 9002"]
     expose:
       - '9002'
     networks:
