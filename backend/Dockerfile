@@ -4,14 +4,14 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install dependencies required by backend_api.py
-RUN pip install --no-cache-dir fastapi uvicorn huggingface_hub prometheus-client python-multipart
+# Install lightweight backend_api deps + Heavy backend_local PyTorch CPU deps
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir fastapi uvicorn huggingface_hub prometheus-client python-multipart transformers accelerate soundfile librosa
 
-# Copy the specific backend API script
-COPY backend_api.py /app/
+# Copy all backend scripts
+COPY . /app/
 
-# Expose the API port based on prometheus.yml config
-EXPOSE 9001
+EXPOSE 9001 9002
 
-# Run uvicorn on port 9001
+# Default CMD (can be overridden by compose for different services)
 CMD ["uvicorn", "backend_api:app", "--host", "0.0.0.0", "--port", "9001"]
