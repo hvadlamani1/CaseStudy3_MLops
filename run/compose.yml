@@ -4,11 +4,11 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: atc_backend
+    container_name: group1_backend
     expose:
       - '9001'
     networks:
-      - atc_net
+      - group1_net
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:9001/health']
       interval: 10s
@@ -22,12 +22,12 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: atc_backend_local
+    container_name: group1_backend_local
     command: ["uvicorn", "backend_local:app", "--host", "0.0.0.0", "--port", "9002"]
     expose:
       - '9002'
     networks:
-      - atc_net
+      - group1_net
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:9002/health']
       interval: 10s
@@ -40,7 +40,7 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
-    container_name: atc_frontend
+    container_name: group1_frontend
     depends_on:
       backend:
         condition: service_healthy
@@ -51,16 +51,16 @@ services:
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
     networks:
-      - atc_net
+      - group1_net
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
+    container_name: group1_prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
+      - group1_prometheus_data:/prometheus
     ports:
       - '22051:9090'
     depends_on:
@@ -71,12 +71,12 @@ services:
       backend_local:
         condition: service_started
     networks:
-      - atc_net
+      - group1_net
 
 networks:
-  atc_net:
+  group1_net:
     driver: bridge
 
 volumes:
-  prometheus_data:
+  group1_prometheus_data:
     driver: local
