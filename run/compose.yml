@@ -1,5 +1,6 @@
 services:
   backend:
+    image: group1_backend
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -17,6 +18,7 @@ services:
     restart: unless-stopped
 
   backend_local:
+    image: group1_backend_local
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -34,6 +36,7 @@ services:
       start_period: 30s
 
   frontend:
+    image: group1_frontend
     build:
       context: ../frontend
       dockerfile: Dockerfile
@@ -42,7 +45,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - '7001:7001'
+      - '22050:7001'
     expose:
       - '8001'
     environment:
@@ -59,7 +62,7 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - '9090:9090'
+      - '22051:9090'
     depends_on:
       frontend:
         condition: service_started
