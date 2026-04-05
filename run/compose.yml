@@ -88,6 +88,18 @@ services:
     restart: unless-stopped
 
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: group1_grafana
+    ports:
+      - "22056:3000"
+    volumes:
+      - group1_grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - group1_net
+    restart: unless-stopped
 
 networks:
   group1_net:
@@ -95,4 +107,6 @@ networks:
 
 volumes:
   group1_prometheus_data:
+    driver: local
+  group1_grafana_data:
     driver: local
