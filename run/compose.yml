@@ -73,16 +73,19 @@ services:
     networks:
       - group1_net
 
-  ngrok_frontend:
+  ngrok:
     image: ngrok/ngrok:latest
-    container_name: group1_ngrok_frontend
-    command: ["http", "frontend:7001"]
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
+    container_name: group1_ngrok
     depends_on:
       - frontend
+    command: http frontend:7001
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    ports:
+      - "22055:4040"
     networks:
       - group1_net
+    restart: unless-stopped
 
 
 
