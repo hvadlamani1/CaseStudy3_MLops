@@ -96,7 +96,7 @@ services:
     environment:
       NGROK_AUTHTOKEN: ${NGROK_GRAFANA_AUTHTOKEN:-}
     ports:
-      - "22056:4040"
+      - "22057:4040"
     networks:
       - group1_net
     restart: unless-stopped
@@ -106,7 +106,7 @@ services:
     image: grafana/grafana:latest
     container_name: group1_grafana
     ports:
-      - "22056:3000"
+      - "22052:3000"
     volumes:
       - group1_grafana_data:/var/lib/grafana
     depends_on:
