@@ -1,0 +1,125 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "VM Host CPU Load Average (1m)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "node_load1",
+          "legendFormat": "1-minute load",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "none", "min": 0 },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "VM Host Free RAM (GiB)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "node_memory_MemFree_bytes / 1024 / 1024 / 1024",
+          "legendFormat": "Free RAM",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "decbytes", "min": 0 },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Frontend Request Histogram (Fast vs Slow)",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(frontend_request_duration_seconds_bucket{le=\"1.0\"}[24h]))",
+          "legendFormat": "Under 1s",
+          "refId": "A",
+          "instant": true
+        },
+        {
+          "expr": "sum(increase(frontend_request_duration_seconds_bucket{le=\"5.0\"}[24h])) - sum(increase(frontend_request_duration_seconds_bucket{le=\"1.0\"}[24h]))",
+          "legendFormat": "1s to 5s",
+          "refId": "B",
+          "instant": true
+        },
+        {
+          "expr": "sum(increase(frontend_request_duration_seconds_bucket{le=\"+Inf\"}[24h])) - sum(increase(frontend_request_duration_seconds_bucket{le=\"5.0\"}[24h]))",
+          "legendFormat": "Over 5s",
+          "refId": "C",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0 },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "showValue": "auto",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Backend API Latency Histogram",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(backend_request_duration_seconds_bucket{le=\"2.5\"}[24h]))",
+          "legendFormat": "Under 2.5s",
+          "refId": "A",
+          "instant": true
+        },
+        {
+          "expr": "sum(increase(backend_request_duration_seconds_bucket{le=\"7.5\"}[24h])) - sum(increase(backend_request_duration_seconds_bucket{le=\"2.5\"}[24h]))",
+          "legendFormat": "2.5s to 7.5s",
+          "refId": "B",
+          "instant": true
+        },
+        {
+          "expr": "sum(increase(backend_request_duration_seconds_bucket{le=\"+Inf\"}[24h])) - sum(increase(backend_request_duration_seconds_bucket{le=\"7.5\"}[24h]))",
+          "legendFormat": "Over 7.5s",
+          "refId": "C",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0 },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "showValue": "auto",
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [ "ATC_Transcription" ],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timezone": "",
+  "title": "Group 1 Dashboard Metrics",
+  "version": 1
+}
