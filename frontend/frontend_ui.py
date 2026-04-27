@@ -10,9 +10,9 @@ FRONTEND_LATENCY = Histogram("frontend_request_duration_seconds", "Time taken fo
 FRONTEND_BACKEND_ERRORS = Counter("frontend_backend_errors_total", "Total number of backend errors encountered by frontend")
 FRONTEND_EXCEPTIONS = Counter("frontend_exceptions_total", "Total number of unexpected UI exceptions")
 
-#Where to send the backend requests
-BACKEND_API_URL = "http://backend:9001/process_audio"
-BACKEND_LOCAL_URL = "http://backend_local:9002/process_audio"
+# Where to send the backend requests
+BACKEND_API_URL = os.environ.get("BACKEND_API_URL", "http://backend:9001/process_audio")
+BACKEND_LOCAL_URL = os.environ.get("BACKEND_LOCAL_URL", "http://backend_local:9002/process_audio")
 
 
 def transcribe_audio_ui(audio_file, use_local_model):
