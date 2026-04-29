@@ -101,6 +101,5 @@
     "FARGATE"
   ],
   "cpu": "2048",
-  "memory": "4096",
-  "enableFaultInjection": false
+  "memory": "4096"
 }
