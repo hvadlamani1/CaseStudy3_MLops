@@ -1,0 +1,108 @@
+name: Deploy to Amazon ECS
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  AWS_REGION: us-east-2                   # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY_FRONTEND: mlops-frontend           # set this to your Amazon ECR repository name
+  ECR_REPOSITORY_BACKEND: mlops-backend             # set this to your Amazon ECR repository name
+  ECR_REPOSITORY_BACKEND_LOCAL: mlops-backend-local # set this to your Amazon ECR repository name
+  ECS_SERVICE: mlops-service                 # set this to your Amazon ECS service name
+  ECS_CLUSTER: mlops-cluster                 # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: ./task-definition.json # set this to the path to your Amazon ECS task definition
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Inject Secrets into Task Definition
+      run: |
+        sed -i "s/REPLACE_ME_WITH_HF_TOKEN/${{ secrets.HF_TOKEN }}/g" ${{ env.ECS_TASK_DEFINITION }}
+
+    # Setup Docker Buildx to build ARM64 images on the Ubuntu runner
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push frontend image to Amazon ECR
+      id: build-image-frontend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest --push frontend
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Build, tag, and push backend image to Amazon ECR
+      id: build-image-backend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest --push backend
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Build, tag, and push backend_local image to Amazon ECR
+      id: build-image-backend-local
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker buildx build --platform linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND_LOCAL:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND_LOCAL:latest --push backend
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND_LOCAL:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Fill in the new frontend image ID in the Amazon ECS task definition
+      id: task-def-frontend
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: frontend-container
+        image: ${{ steps.build-image-frontend.outputs.image }}
+
+    - name: Fill in the new backend image ID in the Amazon ECS task definition
+      id: task-def-backend
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
+        container-name: backend-api-container
+        image: ${{ steps.build-image-backend.outputs.image }}
+
+    - name: Fill in the new backend_local image ID in the Amazon ECS task definition
+      id: task-def-backend-local
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def-backend.outputs.task-definition }}
+        container-name: backend-local-container
+        image: ${{ steps.build-image-backend-local.outputs.image }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def-backend-local.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true

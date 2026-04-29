@@ -1,0 +1,106 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "frontend-container",
+      "image": "507217481499.dkr.ecr.us-east-2.amazonaws.com/mlops-frontend",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 7001,
+          "hostPort": 7001,
+          "protocol": "tcp",
+          "name": "frontend-container-7001-tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "BACKEND_API_URL",
+          "value": "http://localhost:9001/process_audio"
+        },
+        {
+          "name": "HF_TOKEN",
+          "value": "REPLACE_ME_WITH_HF_TOKEN"
+        },
+        {
+          "name": "BACKEND_LOCAL_URL",
+          "value": "http://localhost:9002/process_audio"
+        }
+      ],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "ulimits": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mlops-full-stack",
+          "awslogs-create-group": "true",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        },
+        "secretOptions": []
+      },
+      "systemControls": []
+    },
+    {
+      "name": "backend-api-container",
+      "image": "507217481499.dkr.ecr.us-east-2.amazonaws.com/mlops-backend",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 9001,
+          "hostPort": 9001,
+          "protocol": "tcp",
+          "name": "backend-api-container-9001-tcp"
+        }
+      ],
+      "essential": false,
+      "environment": [],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "systemControls": []
+    },
+    {
+      "name": "backend-local-container",
+      "image": "507217481499.dkr.ecr.us-east-2.amazonaws.com/mlops-backend-local",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 9002,
+          "hostPort": 9002,
+          "protocol": "tcp",
+          "name": "backend-local-container-9002-tcp"
+        }
+      ],
+      "essential": false,
+      "command": [
+        "sh",
+        "-c",
+        "prometheus-node-exporter & uvicorn backend_local:app --host 0.0.0.0 --port 9002"
+      ],
+      "environment": [],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "systemControls": []
+    }
+  ],
+  "family": "mlops-full-stack",
+  "executionRoleArn": "arn:aws:iam::507217481499:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "runtimePlatform": {
+    "cpuArchitecture": "ARM64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "2048",
+  "memory": "4096",
+  "enableFaultInjection": false
+}
